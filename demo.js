@@ -11,7 +11,7 @@ Cylon.robot({
     sphero: {driver: 'sphero'}
   },
 
-  work: main(my)
-  
+  work: main
+
 }).start();
 
