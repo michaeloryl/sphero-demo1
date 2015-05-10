@@ -80,15 +80,27 @@ module.exports = function (my) {
     }
   }
 
+  function convertToSignedInt(msb, lsb) {
+    var negative = msb > 128;
+    if (negative) {
+      msb -= 128;
+    }
+    var value = msb*256 + lsb;
+    if (negative) {
+      value = 0 - value;
+    }
+    return value;
+  }
+
   function convertCollisionData(data) {
     var obj = {};
-    obj.xPower = data[0] + data[1]*256;
-    obj.yPower = data[2] + data[3]*256;
-    obj.zPower = data[4] + data[5]*256;
+    obj.xPower = convertToSignedInt(data[0], data[1]);
+    obj.yPower = convertToSignedInt(data[2], data[3]);
+    obj.zPower = convertToSignedInt(data[4], data[5]);
     obj.impactAxis = data[6];
-    obj.xImpact = data[7];
-    obj.yImpact = data[8];
-    obj.speed = data[9];
+    obj.xImpact = convertToSignedInt(data[7], data[8]);
+    obj.yImpact = convertToSignedInt(data[9], data[10]);
+    obj.speed = data[11];
 
     return obj;
   }
@@ -99,6 +111,7 @@ module.exports = function (my) {
 
     //my.sphero.detectLocator();
     resetColor();
+    my.sphero.startCalibration()
     /*
      return qt.after(1000)
      .then(my.sphero.startCalibration())
@@ -115,7 +128,7 @@ module.exports = function (my) {
   function main() {
     console.info("Starting main process \n\n");
 
-    every((4).seconds(), function () {
+    every((1).seconds(), function () {
       if (collisionCount.recent > 0) {
         collisionCount.recent--;
         //console.info('Decreasing collision count by one');
@@ -132,7 +145,7 @@ module.exports = function (my) {
         direction = nextMove.direction;
         speed = nextMove.speed;
       }
-      my.sphero.roll(speed, direction);
+      //my.sphero.roll(speed, direction);
       flashBlue();
       //console.info("Setting new course to " + direction + " degrees at speed of " + speed);
       moves.push({ // maintain log of previous moves for some future use
