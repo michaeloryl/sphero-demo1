@@ -1,0 +1,85 @@
+/* http://pegjs.org/online
+log('Waiting for a tap')
+waitForTap()
+go()
+turnRight()
+go()
+turn(-45)
+log("Wait 3 seconds")
+wait(3)
+setColor('green')
+speed(50)
+turnRight(20)
+go
+turnLeft(45)
+go()
+wait(2)
+turnAround()
+wait(1)
+stop()
+*/
+start =
+    lines
+
+cmdWithPosNumber =
+    "turnRight"   // turnRight(45)
+   /"turnLeft"    // turnLeft(20)
+   /"speed"       // speed(50)
+   /"wait"        // wait(2)
+
+cmdWithNumber =
+    "turn"        // turn(180); turn(-45)
+
+cmdWithString =
+    "log"         // log("this gets logged")
+   /"flash"       // flash('red')
+   /"setColor"    // setColor("green")
+
+cmd =
+    "go"          // go()
+   /"stop"        // stop()
+   /"waitForTap"  // waitForTap()
+   /"turnAround"  // turnAround()
+   /"turnLeft"    // turnLeft() // 90 degrees left
+   /"turnRight"   // turnRigth() // 90 degrees right
+   /"pointMe"     // pointMe() // turns on calibrate mode
+
+number =
+    n:[0-9.]+
+      { return parseInt(n.join("")); }
+   /"-" n:[0-9.]+
+      { return parseInt('-' + n.join("")); }
+
+posNumber =
+    n:[0-9.]+
+      { return parseInt(n.join("")); }
+
+string =
+    s:[a-z,A-Z,0-9 ]*
+      { return s.join(""); }
+
+statement =
+   c:cmd "(" ")"
+      { return [c]; }
+   /c:cmdWithNumber "(" n:number ")"
+      { return [c, n]; }
+   /c:cmdWithPosNumber "(" n:posNumber ")"
+      { return [c, n]; }
+   /c:cmdWithString "(" ['] s:string ['] ")"
+      { return [c, s]; }
+   /c:cmdWithString "(" ["] s:string ["] ")"
+      { return [c, s]; }
+   /c:cmd
+      { return [c]; }
+
+endline =
+    "\n"
+    /"\n\r"
+    /"\r\n"
+
+line =
+    s:statement endline?
+      { return s }
+
+lines =
+    line*
