@@ -13,7 +13,7 @@ module.exports = function (my) {
     recent: 0
   };
 
-  var stopped = false;
+  var stopped = true;
   var moves = [];
   var movesQueue = [];
 
@@ -25,9 +25,9 @@ module.exports = function (my) {
 
   function flashRed() {
     my.sphero.setRGB(0xFF0000);
-    qt.after(200)
+    qt.after(400)
       .then(my.sphero.setRGB(0xBB0000))
-      .then(qt.after(200))
+      .then(qt.after(400))
       .then(my.sphero.setRGB(0x770000))
       .then(qt.after(200))
       .then(my.sphero.setRGB(0x330000))
@@ -53,30 +53,34 @@ module.exports = function (my) {
   }
 
   function collision(data) {
-    console.info("Captain, we've been hit!");
-    flashRed(1);
-    my.sphero.stop();
-    stopped = true;
-    console.info(JSON.stringify(data));
     var impact = convertCollisionData(data.DATA);
-    console.info(JSON.stringify(impact));
-    collisionCount.total++;
-    collisionCount.recent++;
-    if (collisionCount.recent > 2) {
-      console.info('Shutting down...');
-      process.exit(1);
-    } else {
-      var lastMove = moves.slice(-1)[0];
-      var direction = lastMove.direction + 180;
-      if (direction > 360) {
-        direction -= 360;
+    var impactStrength = Math.sqrt(impact.xImpact * impact.xImpact + impact.yImpact * impact.yImpact).toFixed(1);
+    console.info("Impact force: " + impactStrength + " -> " + JSON.stringify(impact));
+    flashRed(1);
+    if (impactStrength > 40) {
+      console.info("Reacting to impact\n\n");
+      my.sphero.stop();
+      stopped = true;
+      collisionCount.total++;
+      collisionCount.recent++;
+      if (collisionCount.recent > 2) {
+        console.info('Shutting down...');
+        process.exit(1);
+      } else {
+        if (moves.length != 0) {
+          var lastMove = moves.slice(-1)[0];
+          var direction = lastMove.direction + 180;
+          if (direction > 360) {
+            direction -= 360;
+          }
+          movesQueue.push({
+            direction: direction,
+            speed: lastMove.speed
+          });
+        }
+        //console.info("Preparing to alter course to " + direction + " degrees at speed of " + lastMove.speed);
+        qt.after((2).seconds()).then(function() {stopped = false;});
       }
-      movesQueue.push({
-        direction: direction,
-        speed: lastMove.speed
-      });
-      //console.info("Preparing to alter course to " + direction + " degrees at speed of " + lastMove.speed);
-      qt.after((2).seconds()).then(function() {stopped = false;});
     }
   }
 
@@ -94,10 +98,12 @@ module.exports = function (my) {
 
   function convertCollisionData(data) {
     var obj = {};
+/*
     obj.xPower = convertToSignedInt(data[0], data[1]);
     obj.yPower = convertToSignedInt(data[2], data[3]);
     obj.zPower = convertToSignedInt(data[4], data[5]);
     obj.impactAxis = data[6];
+*/
     obj.xImpact = convertToSignedInt(data[7], data[8]);
     obj.yImpact = convertToSignedInt(data[9], data[10]);
     obj.speed = data[11];
@@ -111,7 +117,7 @@ module.exports = function (my) {
 
     //my.sphero.detectLocator();
     resetColor();
-    my.sphero.startCalibration()
+    my.sphero.startCalibration();
     /*
      return qt.after(1000)
      .then(my.sphero.startCalibration())
@@ -133,25 +139,31 @@ module.exports = function (my) {
         collisionCount.recent--;
         //console.info('Decreasing collision count by one');
       }
+      if (stopped) {
+        collisionCount.recent = 0;
+      }
     });
 
-    every((2).second(), function () {
+    every((1).second(), function () {
       var speed, direction;
-      if (movesQueue.length == 0) { // if no moves have been queued up, pick a random course
-        direction = Math.floor(Math.random() * 360);
-        speed = 70 + Math.floor(Math.random() * 75);
-      } else { // otherwise take the last course in the queue
-        var nextMove = movesQueue.pop();
-        direction = nextMove.direction;
-        speed = nextMove.speed;
+      if (!stopped) {
+        my.sphero.finishCalibration();
+        if (movesQueue.length == 0) { // if no moves have been queued up, pick a random course
+          direction = Math.floor(Math.random() * 360);
+          speed = 70 + Math.floor(Math.random() * 75);
+        } else { // otherwise take the last course in the queue
+          var nextMove = movesQueue.pop();
+          direction = nextMove.direction;
+          speed = nextMove.speed;
+        }
+        my.sphero.roll(speed, direction);
+        flashBlue();
+        console.info(direction + " degrees at speed of " + speed);
+        moves.push({ // maintain log of previous moves for some future use
+          direction: direction,
+          speed: speed
+        });
       }
-      //my.sphero.roll(speed, direction);
-      flashBlue();
-      //console.info("Setting new course to " + direction + " degrees at speed of " + speed);
-      moves.push({ // maintain log of previous moves for some future use
-        direction: direction,
-        speed: speed
-      });
     });
 
     return;
