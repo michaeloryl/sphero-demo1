@@ -1,6 +1,8 @@
 /* http://pegjs.org/online
+pointMe()
 log('Waiting for a tap')
 waitForTap()
+speed(50)
 go()
 turnRight()
 go()
@@ -11,9 +13,11 @@ setColor('green')
 speed(50)
 turnRight(20)
 go
-turnLeft(45)
-go()
-wait(2)
+loop(2) {
+ turnLeft(45)
+ go()
+ wait(2)
+}
 turnAround()
 wait(1)
 stop()
@@ -34,6 +38,9 @@ cmdWithString =
     "log"         // log("this gets logged")
    /"flash"       // flash('red')
    /"setColor"    // setColor("green")
+
+cmdBlock =
+    "loop"
 
 cmd =
     "go"          // go()
@@ -59,8 +66,10 @@ string =
       { return s.join(""); }
 
 statement =
-   c:cmd "(" ")"
+   c:cmd "()"
       { return [c]; }
+   /c:cmdBlock "(" n:number ")" " "* b:block
+      { return [c, n, b]; }
    /c:cmdWithNumber "(" n:number ")"
       { return [c, n]; }
    /c:cmdWithPosNumber "(" n:posNumber ")"
@@ -76,6 +85,14 @@ endline =
     "\n"
     /"\n\r"
     /"\r\n"
+
+block =
+    "{" endline? i:indentedLine+ "}" endline
+      { return i }
+
+indentedLine =
+    " "* s:statement endline?
+      { return s }
 
 line =
     s:statement endline?
