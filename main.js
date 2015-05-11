@@ -23,6 +23,10 @@ module.exports = function (my) {
 
   // ----------------------------------------
 
+  function ease(x) {
+    return (Math.sin(2 * Math.PI * (x - 1/4)) + 1) / 2
+  }
+
   function flashRed() {
     my.sphero.setRGB(0xFF0000);
     qt.after(400)
